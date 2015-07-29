@@ -1,0 +1,170 @@
+%%
+%% Note for program.c
+%%
+
+%% label 1,2
+\documentclass[12pt]{article}
+
+\textwidth 155 true mm
+\textheight 247 truemm
+\topmargin -0.4 true mm
+\headheight 0 true mm
+\headsep 0 true mm
+\oddsidemargin 2.1 true mm
+\evensidemargin 2.1 true mm
+\footskip 5 true mm
+%\titlesep 12pt
+
+%\pagestyle{empty}
+
+%\usepackage{color}
+%\usepackage{refcheck}
+%\usepackage{url}
+%\usepackage{amssymb}
+%\usepackage{graphicx}
+\usepackage{framed}
+\usepackage{amsmath}
+
+\usepackage{amsthm}
+%\newtheorem{theorem}{Theorem}
+%\newtheorem{proposition}{Proposition}
+%\newtheorem{lemma}{Lemma}
+%\newtheorem{corollary}{Corollary}
+%\newtheorem{conjecture}{Conjecture}
+%\newtheorem{algorithm}{Algorithm}
+\theoremstyle{definition}
+%\newtheorem{definition}{Definition}
+\newtheorem{example}{Example}
+
+\def\pd#1{\partial_{#1}}
+
+\title{Note for {\tt program.c}}
+\author{Tamio Koyama}
+\date{}
+
+\begin{document}
+\maketitle
+\section{Preparations}
+My code {\tt program.c} can be compiled by the following command:
+\begin{framed}
+\begin{verbatim}
+$gcc program.c -lm -lgsl -lblas -llapack
+\end{verbatim}
+\end{framed}
+Compiling {\tt program.c} needs {\tt GSL}, {\tt BLAS}, and {\tt LAPACK}.
+The following results of numerical experiments were obtained 
+on Linux(Debian).
+
+\section{Simplex (the case of Moving parameter $b$ only)}
+In this section, we show a numerical experiment in the case where
+we do not move parameter $a$.
+In other words, for given parameter $a$ and $b$, we take 
+$$
+a_0 = a,\,b_0 = 0
+$$
+as the initial point.
+
+\if0
+\begin{example}
+Let the dimension be $d=2$.
+Suppose the simplex is defined by 
+\begin{align*}
+  x_1 &\geq 0, & x_2&\geq 0, & x_1+x_2&\leq 10.
+\end{align*}
+Then the parameters are
+\begin{align*}
+  a &= \begin{pmatrix} 1 & 0 \\ 0 & 1 \\ -1 & -1  \end{pmatrix}^\top, &
+  b &= \begin{pmatrix} 0 \\ 0 \\ 10 \end{pmatrix}.
+\end{align*}
+In this case, the probability can be obtained by the command
+\begin{framed}
+\begin{verbatim}
+$./a.out 1 2  1 0 0  0 1 0  -1 -1 10
+\end{verbatim}
+\end{framed}
+And we have the following result:
+\begin{framed}
+\begin{verbatim}
+...
+result:
+   0.2499999984    0.4999999979    0.4999999979    1.0000000000   ...
+Probability = 0.25
+\end{verbatim}
+\end{framed}
+\end{example}
+\fi
+
+\begin{example}\label{2} %% Example from Xi san
+Let the dimension be $d=3$.
+Suppose the simplex is defined by
+\begin{align*}
+  x_1 &\geq 0,\\ 
+  x_2 &\geq 0,\\
+  x_3 &\geq 0,\\
+  11x_1+12x_2+13x_3&\leq 10.
+\end{align*}
+Then the parameters are
+\begin{align}\label{1}
+  a &= 
+  \begin{pmatrix} 
+    1 & 0 & 0 \\ 
+    0 & 1 & 0 \\ 
+    0 & 0 & 1 \\ 
+  -11 & -12 & -13
+  \end{pmatrix}^\top, &
+  b &= 
+  \begin{pmatrix} 0 \\ 0 \\ 0 \\ 10 \end{pmatrix}.
+\end{align}
+In this case, the command
+\begin{framed}
+\begin{verbatim}
+$./a.out 1  3  1 0 0 0  0 1 0 0  0 0 1 0 -11 -12 -13 10
+\end{verbatim}
+\end{framed}
+computes the probability of the simplex, and we obtain the following result
+\begin{framed}
+\begin{verbatim}
+...
+result:
+   0.0055573545    0.0459324799    0.0495911154    0.2791218357 ...
+Probability = 0.00555735
+\end{verbatim}
+\end{framed}
+\end{example}
+
+\section{Simplex(the case of moving parameter $a$ and $b$)}
+In this section, we show a numerical experiment in the case where
+we move both parameter $a$ and $b$.
+In this section, we fix the initial point as
+$$
+a_0 = 
+\begin{pmatrix} 
+  1 & 0 & \cdots & 0\\
+  0 & 1 &        & 0\\
+  \vdots & & \ddots & \\
+  0 & 0 &        & 1\\
+  -1 & -1 & \cdots & -1
+\end{pmatrix}^\top
+,\,b_0 = 0.
+$$
+\begin{example}
+Let $d=3$ and suppose that parameters $a$ and $b$ are given by \eqref{1}.
+Then the command 
+\begin{framed}
+\begin{verbatim}
+$./a.out 2  3  1 0 0 0  0 1 0 0  0 0 1 0 -11 -12 -13 10
+\end{verbatim}
+\end{framed}
+computes the probability of the simplex, and we have the following result:
+\begin{framed}
+\begin{verbatim}
+...
+result:
+   0.0055573553    0.0459324836    0.0495911191    0.2791218390 ...
+Probability = 0.00555736
+\end{verbatim}
+\end{framed}
+We obtained the same value which we got in Example \ref{2}.
+\end{example}
+
+\end{document}
