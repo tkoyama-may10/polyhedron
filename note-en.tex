@@ -3,6 +3,8 @@
 %%
 
 %% label 1,2
+
+%% ispell -t -l <fb2.tex | sort | uniq
 \documentclass[12pt]{article}
 
 \textwidth 155 true mm
@@ -45,7 +47,7 @@
 \begin{document}
 \maketitle
 \section{Preparations}
-My code {\tt program.c} can be compiled by the following command:
+You can compile {\tt program.c} by the following command:
 \begin{framed}
 \begin{verbatim}
 $gcc program.c -lm -lgsl -lblas -llapack
@@ -55,8 +57,24 @@ Compiling {\tt program.c} needs {\tt GSL}, {\tt BLAS}, and {\tt LAPACK}.
 The following results of numerical experiments were obtained 
 on Linux(Debian).
 
-\section{Simplex (the case of Moving parameter $b$ only)}
-In this section, we show a numerical experiment in the case where
+\section{Synopsis}
+\begin{verbatim}
+./a.out S d a_11 a_12 ...
+\end{verbatim}
+\begin{itemize}
+\item \verb+S+\/: Strategy of evaluation. Choices are
+  \begin{itemize}
+    \item \verb+S=1+\ Only the parameter $b$ moves for HGM.
+    \item \verb+S=2+\ Both parameters $a$ and $b$ move for HGM.
+      %\item Other strategy parameters are experimental
+  \end{itemize}
+\item \verb+d+\/: Dimension.
+\item \verb+a_11,...+\/: Coefficients of inequalities.
+\end{itemize}
+
+\section{Examples}
+\subsection{Simplex (Only the parameter $b$ moves for HGM)}
+In this subsection, we show a numerical experiment in the case where
 we do not move parameter $a$.
 In other words, for given parameter $a$ and $b$, we take 
 $$
@@ -132,10 +150,10 @@ Probability = 0.00555735
 \end{framed}
 \end{example}
 
-\section{Simplex(the case of moving parameter $a$ and $b$)}
-In this section, we show a numerical experiment in the case where
+\subsection{Simplex(Both parameters $a$ and $b$ move for HGM)}
+In this subsection, we show a numerical experiment in the case where
 we move both parameter $a$ and $b$.
-In this section, we fix the initial point as
+In this subsection, we fix the initial point as
 $$
 a_0 = 
 \begin{pmatrix} 
@@ -166,5 +184,13 @@ Probability = 0.00555736
 \end{framed}
 We obtained the same value which we got in Example \ref{2}.
 \end{example}
+
+\begin{thebibliography}{1}
+\bibitem{koyama2}
+T.~Koyama.
+\newblock Holonomic modules associated with multivariate normal probabilities
+  of polyhedra.
+\newblock \url{http://arxiv.org/abs/1311.6905}, 2013.
+\end{thebibliography}
 
 \end{document}
