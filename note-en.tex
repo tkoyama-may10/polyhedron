@@ -1,10 +1,14 @@
 %%
-%% Note for program.c
+%% In this note, we explain how to generate the low data in our paper
+%% ``Holonomic gradient method for the probability content of a simplex region
+%% with a multivariate normal distribution''
+%%
+%% To compile this TeX file, simply type the following command:
+%%     latex note-en.tex && latex note-en.tex
 %%
 
 %% label 1,2
 
-%% ispell -t -l <fb2.tex | sort | uniq
 \documentclass[12pt]{article}
 
 \textwidth 155 true mm
@@ -19,178 +23,153 @@
 
 %\pagestyle{empty}
 
-%\usepackage{color}
+\usepackage{color}
 %\usepackage{refcheck}
-%\usepackage{url}
+\usepackage{url}
 %\usepackage{amssymb}
+%\usepackage{amsmath}
 %\usepackage{graphicx}
-\usepackage{framed}
-\usepackage{amsmath}
+\usepackage{listings}
 
-\usepackage{amsthm}
+%\usepackage{amsthm}
 %\newtheorem{theorem}{Theorem}
 %\newtheorem{proposition}{Proposition}
 %\newtheorem{lemma}{Lemma}
 %\newtheorem{corollary}{Corollary}
 %\newtheorem{conjecture}{Conjecture}
 %\newtheorem{algorithm}{Algorithm}
-\theoremstyle{definition}
+%\theoremstyle{definition}
 %\newtheorem{definition}{Definition}
-\newtheorem{example}{Example}
+%\newtheorem{example}{Example}
+
+%% for shell script
+\lstdefinestyle{BashInputStyle}{
+  language=bash,
+  firstline=2,% Supress the first line that begins with `%`
+  basicstyle=\small\sffamily,
+  numbers=left,
+  numberstyle=\tiny,
+  numbersep=3pt,
+  frame=tb,
+  columns=fullflexible,
+  backgroundcolor=\color{white},
+  linewidth=0.9\linewidth,
+  xleftmargin=0.1\linewidth
+}
 
 \def\pd#1{\partial_{#1}}
 
-\title{Note for {\tt program.c}}
+\title{A Note for Numerical Experiments}
 \author{Tamio Koyama}
 \date{}
 
 \begin{document}
 \maketitle
-\section{Preparations}
-You can compile {\tt program.c} by the following command:
-\begin{framed}
-\begin{verbatim}
-$gcc program.c -lm -lgsl -lblas -llapack
-\end{verbatim}
-\end{framed}
-Compiling {\tt program.c} needs {\tt GSL}, {\tt BLAS}, and {\tt LAPACK}.
-The following results of numerical experiments were obtained 
-on Linux(Debian).
+%\thispagestyle{empty}
+
+\begin{abstract}
+In this note, we explain how to generate the low data in our paper
+\cite{2015koyama2}.
+\end{abstract}
+
+\section{Preparation}
+For our numerical experiments, we prepared 
+C program {\tt program.c}, 
+shell scripts \\{\tt numerical\_experiment.sh}, 
+and {\tt R} scripts {\tt monte\_carlo.R}.
+Our computer system is linux(debian), and we utilized GNU scientific library
+BLAS, and {\tt R}.
+The source file {\tt program.c} can be compiled by the following command:
+\begin{lstlisting}[style=BashInputStyle]
+
+gcc program.c -lm -lgsl -lblas
+\end{lstlisting}
+
+ 
+In our numerical experiments, we generated the following files:
+{\tt tab3.tex}, 
+{\tt tab2.tex}, 
+{\tt tab1.tex}, 
+{\tt raw\_data3.txt}, 
+{\tt raw\_data2.txt}, 
+{\tt raw\_data1.txt}.
 
 \section{Synopsis}
 \begin{verbatim}
-./a.out S d a_11 a_12 ...
+./a.out S d [a_11 a_12 ... b_1 a_21 a_22 ... b_2 ...]
 \end{verbatim}
+Our program computes 
+the probability content of a simplex region
+with a multivariate normal distribution
+$$
+\int_{\mathbf R^d} \frac{1}{(2\pi)^{d/2}}
+\exp\left(-\frac{1}{2}\sum_{i=1}^dx_i^2\right)
+\prod_{j=1}^{d+1}H\left(f_j(a,b,x)\right)
+dx
+$$
+and the probability content of a simplicial cone
+$$
+\int_{\mathbf R^d} \frac{1}{(2\pi)^{d/2}}
+\exp\left(-\frac{1}{2}\sum_{i=1}^dx_i^2\right)
+\prod_{j=1}^dH\left(f_j(a,b,x)\right)
+dx.
+$$
+Here, $H(x)$ is the Heaviside function and we set 
+$f_j(a,b,x)=\sum_{i=1}^da_{ij}x_i+b_j$.
 \begin{itemize}
-\item \verb+S+\/: Strategy of evaluation. Choices are
+\item \verb+S+\/: Switch the behavior of the program. Behaviors are
   \begin{itemize}
-    \item \verb+S=1+\ Only the parameter $b$ moves for HGM.
-    \item \verb+S=2+\ Both parameters $a$ and $b$ move for HGM.
-      %\item Other strategy parameters are experimental
+    \item \verb+S=1+\ : %%    simplex();
+    Compute the probability content of a simplex region by HGM
+    \item \verb+S=2+\ : %%    simplicial_cone();
+    Compute the probability content of a simplicial cone
+    \item \verb+S=11+\ : %%    numerical_experiment1(p);
+    Generate data for Table 1.
+    \item \verb+S=12+\ : %%    numerical_experiment2(p);
+    Generate data for Table 3.
+    \item \verb+S=13+\ : %%    numerical_experiment3(p);
+    Generate data for Table 2.
   \end{itemize}
 \item \verb+d+\/: Dimension.
-\item \verb+a_11,...+\/: Coefficients of inequalities.
+\item \verb+a_11,...+\/: Parameters $a_{ij}$.
+\item \verb+b_1,...+\/: Parameters $b_i$.
 \end{itemize}
 
-\section{Examples}
-\subsection{Simplex (Only the parameter $b$ moves for HGM)}
-In this subsection, we show a numerical experiment in the case where
-we do not move parameter $a$.
-In other words, for given parameter $a$ and $b$, we take 
-$$
-a_0 = a,\,b_0 = 0
-$$
-as the initial point.
 
-\if0
-\begin{example}
-Let the dimension be $d=2$.
-Suppose the simplex is defined by 
-\begin{align*}
-  x_1 &\geq 0, & x_2&\geq 0, & x_1+x_2&\leq 10.
-\end{align*}
-Then the parameters are
-\begin{align*}
-  a &= \begin{pmatrix} 1 & 0 \\ 0 & 1 \\ -1 & -1  \end{pmatrix}^\top, &
-  b &= \begin{pmatrix} 0 \\ 0 \\ 10 \end{pmatrix}.
-\end{align*}
-In this case, the probability can be obtained by the command
-\begin{framed}
-\begin{verbatim}
-$./a.out 1 2  1 0 0  0 1 0  -1 -1 10
-\end{verbatim}
-\end{framed}
-And we have the following result:
-\begin{framed}
-\begin{verbatim}
-...
-result:
-   0.2499999984    0.4999999979    0.4999999979    1.0000000000   ...
-Probability = 0.25
-\end{verbatim}
-\end{framed}
-\end{example}
-\fi
+\section{How to Generate Low Data}
+The following command generates the low data
+{\tt tab3.tex}, 
+{\tt tab2.tex}, 
+{\tt tab1.tex}, 
+{\tt raw\_data3.txt}, 
+{\tt raw\_data2.txt}, and
+{\tt raw\_data1.txt}:
+\begin{lstlisting}[style=BashInputStyle]
 
-\begin{example}\label{2} %% Example from Xi san
-Let the dimension be $d=3$.
-Suppose the simplex is defined by
-\begin{align*}
-  x_1 &\geq 0,\\ 
-  x_2 &\geq 0,\\
-  x_3 &\geq 0,\\
-  11x_1+12x_2+13x_3&\leq 10.
-\end{align*}
-Then the parameters are
-\begin{align}\label{1}
-  a &= 
-  \begin{pmatrix} 
-    1 & 0 & 0 \\ 
-    0 & 1 & 0 \\ 
-    0 & 0 & 1 \\ 
-  -11 & -12 & -13
-  \end{pmatrix}^\top, &
-  b &= 
-  \begin{pmatrix} 0 \\ 0 \\ 0 \\ 10 \end{pmatrix}.
-\end{align}
-In this case, the command
-\begin{framed}
-\begin{verbatim}
-$./a.out 1  3  1 0 0 0  0 1 0 0  0 0 1 0 -11 -12 -13 10
-\end{verbatim}
-\end{framed}
-computes the probability of the simplex, and we obtain the following result
-\begin{framed}
-\begin{verbatim}
-...
-result:
-   0.0055573545    0.0459324799    0.0495911154    0.2791218357 ...
-Probability = 0.00555735
-\end{verbatim}
-\end{framed}
-\end{example}
+gcc program.c -lm -lgsl -lblas
+./numerical_experiment.sh
+\end{lstlisting}
 
-\subsection{Simplex(Both parameters $a$ and $b$ move for HGM)}
-In this subsection, we show a numerical experiment in the case where
-we move both parameter $a$ and $b$.
-In this subsection, we fix the initial point as
-$$
-a_0 = 
-\begin{pmatrix} 
-  1 & 0 & \cdots & 0\\
-  0 & 1 &        & 0\\
-  \vdots & & \ddots & \\
-  0 & 0 &        & 1\\
-  -1 & -1 & \cdots & -1
-\end{pmatrix}^\top
-,\,b_0 = 0.
-$$
-\begin{example}
-Let $d=3$ and suppose that parameters $a$ and $b$ are given by \eqref{1}.
-Then the command 
-\begin{framed}
-\begin{verbatim}
-$./a.out 2  3  1 0 0 0  0 1 0 0  0 0 1 0 -11 -12 -13 10
-\end{verbatim}
-\end{framed}
-computes the probability of the simplex, and we have the following result:
-\begin{framed}
-\begin{verbatim}
-...
-result:
-   0.0055573553    0.0459324836    0.0495911191    0.2791218390 ...
-Probability = 0.00555736
-\end{verbatim}
-\end{framed}
-We obtained the same value which we got in Example \ref{2}.
-\end{example}
+
+%\iffalse
+\iftrue
 
 \begin{thebibliography}{1}
-\bibitem{koyama2}
+
+\bibitem{2015koyama2}
 T.~Koyama.
-\newblock Holonomic modules associated with multivariate normal probabilities
-  of polyhedra.
-\newblock \url{http://arxiv.org/abs/1311.6905}, 2013.
+\newblock Holonomic gradient method for the probability content of a simplex
+  region with a multivariate normal distribution.
+\newblock \url{http://arxiv.org/abs/1512.06564}, 2015.
+
 \end{thebibliography}
 
+\else
+
+\bibliographystyle{plain}
+\bibliography{reference}
+
+\fi
+
+%\appendix
 \end{document}

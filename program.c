@@ -37,12 +37,17 @@ static void simplex_init(double *g);
 static void simplex_rk(double *g);
 static int simplex_function(double t, const double g[], double dg[], void *params);
 static void simplex_update(double t);
-static void simplex_get_prob(double *g);
 
 static void simplex2(char **);
 static void simplex2_rk(double *g);
 static int simplex2_function(double t, const double g[], double dg[], void *params);
 static void simplex2_update(double t);
+
+static void simplicial_cone(char **);
+static void simplicial_cone_init(double *g);
+static void simplicial_cone_rk(double *g);
+static int simplicial_cone_function(double t, const double g[], double dg[], void *params);
+static void simplicial_cone_update(double t);
 
 static void update_alpha(void);
 static void update_inv_alpha(void);
@@ -51,10 +56,15 @@ static int cardinality(int J, const int max);
 static double get_del_aij(const double g[], int J, int i, int j);
 static double get_del_bibj(const double g[], int J, int i, int j);
 static double get_del_bj(const double g[], int J, int j);
+static void get_prob(double *g);
 
 
 static void print_vector(FILE *, int, double *, char *);
 static void print_matrix(FILE *fp, int nrow, int ncol, double *matrix,const char *str);
+
+static void numerical_experiment1(char **);
+static void numerical_experiment2(char **);
+static void numerical_experiment3(char **);
 
 static void 
 simplex(char **p)
@@ -137,7 +147,7 @@ simplex(char **p)
   simplex_rk(g);
   print_vector(stdout, rank, g, "output of runge-kutta:\n");
 
-  simplex_get_prob(g);
+  get_prob(g);
   print_vector(stdout, rank, g, "result:\n");
 
   printf("Probability = %g\n", g[0]);
@@ -213,26 +223,6 @@ simplex_update(double t)
   return;
 }
 
-static void
-simplex_get_prob(double *g)
-{
-  double normal_const[dim+1];
-  const double sqrt_two_pi = sqrt(2*M_PI);
-  int i;
-  normal_const[0] = 1.0;
-  for (i = 0; i < dim; i++)
-    normal_const[i+1] = sqrt_two_pi * normal_const[i];
-
-  int J;
-  for ( J = 0; J < rank; J++){
-    int d = dim;
-    for ( i = 0; i < nfacet; i++)
-      if ( J & (1<<i))
-	d--;
-    g[J] *= det_alpha[J]/normal_const[d];
-  }
-  return;
-}
 
 static void 
 simplex2(char **p)
@@ -339,7 +329,7 @@ simplex2(char **p)
   simplex2_rk(g);
   print_vector(stdout, rank, g, "output of runge-kutta:\n");
 
-  simplex_get_prob(g);
+  get_prob(g);
   print_vector(stdout, rank, g, "result:\n");
 
   printf("Probability = %g\n", g[0]);
@@ -396,6 +386,194 @@ simplex2_function(double t, const double g[], double dg[], void *params)
 
 static void 
 simplex2_update(double t)
+{
+  int i,j;
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++)
+      a[j+i*dim] = (1.0 - t)*a0[j+i*dim] + t*a1[j+i*dim];
+    b[i] = t*b1[i];//b[i] = (1-t)*b0[i] + t*b1[i];
+  }
+  update_alpha();
+  update_inv_alpha();
+}
+
+static void
+simplicial_cone(char **p)
+{
+  /* Input */
+  int d;
+  sscanf(*++p,"%d", &d);
+  printf("d=%d\n", d);
+
+  int n = d;
+  double a_loc[d*n], b_loc[n];
+  int i,j;
+  for ( i = 0; i < n; i++){
+    for ( j = 0; j < d; j++)
+      sscanf(*++p, "%lf", a_loc+j+i*d);
+    sscanf(*++p, "%lf", b_loc+i);
+  }
+  printf("a,b:\n");
+  for ( i = 0; i < n; i++){
+    for ( j = 0; j < d; j++)
+      printf("%10.6f ", a_loc[j+i*d]);
+    printf("%10.6f\n", b_loc[i]);
+  }
+
+  /* Setting global variables */
+  dim = d;
+  nfacet = d;
+  rank = (1 << nfacet);
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[(1<<nfacet)];
+  g[rank] = 0.0;
+  int size_a = dim*nfacet;
+  int size_b = nfacet;
+  int size_alpha=nfacet2; 
+  int size_inv_alpha=(1<<nfacet)*nfacet2;
+  int size_det_alpha=(1<<nfacet);
+  int size_dgdb=rank*dim;
+  double work_space[3*size_a
+                   +2*size_b 
+                   +size_alpha 
+                   +size_inv_alpha 
+                   +size_det_alpha
+                   +size_dgdb];
+  double *w = work_space;
+  a = w;     w += size_a;
+  b = w;     w += size_b;
+  a0 = w;     w += size_a;
+  b0 = w;     w += size_b;
+  a1 = a_loc;
+  b1 = b_loc;
+  dadt = w;  w += size_a;
+  dbdt = b_loc;
+  alpha = w; w += size_alpha;
+  inv_alpha = w; w += size_inv_alpha;
+  det_alpha = w; w += size_det_alpha;
+  dgdb = w;  w += size_dgdb;
+
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++)
+      a0[j+i*dim] = (i==j)? 1.0 : 0.0;
+    b0[i] = 0.0;
+  }
+
+  printf("dim = %d\n", dim);
+  print_matrix(stdout, dim, nfacet, a0, "The value of matrix a0:");
+  print_vector(stdout, nfacet, b0, "The value of vector b0:\n");
+  print_matrix(stdout, dim, nfacet, a1, "The value of matrix a1:");
+  print_vector(stdout, nfacet, b1, "The value of vector b1:\n");
+  printf("rank = %d\n", rank);
+
+  for ( i = 0; i < dim; i++)
+    for ( j = 0; j < nfacet; j++)
+      dadt[i+j*dim] = -a0[i+j*dim]+a1[i+j*dim];
+  print_matrix(stdout, dim, nfacet, dadt, "dadt:");
+
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++)
+      a[j+i*dim] = a0[j+i*dim];
+    b[i] = b0[i];
+  }
+
+  update_alpha();
+  print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  update_inv_alpha();
+  int J;
+  printf("determinant: ");
+  for(J = 0; J < rank; J++){
+    //char s[10];
+    //sprintf(s, "%d:", J);
+    //print_matrix(stdout, nfacet, nfacet, inv_alpha+J*nfacet2, s);
+    printf("%g ", det_alpha[J]);
+  }
+  printf("\n");
+
+  simplicial_cone_init(g);
+  print_vector(stdout, rank+1, g, "The initial value of g:\n");
+
+  simplicial_cone_rk(g);
+  print_vector(stdout, rank, g, "output of runge-kutta:\n");
+
+  get_prob(g);
+  print_vector(stdout, rank, g, "result:\n");
+
+  printf("Probability = %g\n", g[0]);
+  return;
+}
+
+static void 
+simplicial_cone_init(double *g)
+{
+  const double c = sqrt(0.5*M_PI);
+  int i, J;
+
+  for (J = 0; J < rank; J++){
+    g[J] = 1.0;
+    for (i = 0; i < dim; i++)
+      if ( J & (1<<i))
+	g[J] *= 1.0 / a0[i*(dim+1)];
+      else
+	g[J] *= c;
+  }
+  return;
+}
+
+static void 
+simplicial_cone_rk(double *g)
+{
+  double h = RK_ACCURACY;
+  const gsl_odeiv_step_type *T = GSL_ODEIV_STEP_TYPE;
+  gsl_odeiv_step *s  = gsl_odeiv_step_alloc (T, rank);
+  gsl_odeiv_control * c = gsl_odeiv_control_y_new (h, 0.0);
+  gsl_odeiv_evolve * e = gsl_odeiv_evolve_alloc (rank);
+  gsl_odeiv_system sys = {simplicial_cone_function, NULL, rank, NULL};
+
+  double t = 0.0;
+  while (t < 1.0){
+    int status = gsl_odeiv_evolve_apply (e, c, s, &sys, &t, 1.0, &h, g);
+    if (status != GSL_SUCCESS)
+      break;
+    //fprintf(stdout, "r=%lf\n",t);
+    //print_vector(stdout, rank+1, g, "g:");
+  }
+  /* free */
+  gsl_odeiv_evolve_free (e);
+  gsl_odeiv_control_free (c);
+  gsl_odeiv_step_free (s);
+  return;
+}
+
+static int 
+simplicial_cone_function(double t, const double g[], double dg[], void *params)
+{
+  simplicial_cone_update(t);
+  int J, i, j;
+  for (J = 0; J < rank; J++){
+    dg[J] = 0.0;
+    for (j = 0; j < nfacet; j++){
+      dg[J] += dbdt[j] * get_del_bj(g, J, j);
+    }
+    for ( i = 0; i < dim; i++){
+      for ( j = 0; j < nfacet; j++){
+	if ( i != j){ /*???*/
+	  dg[J] += dadt[i+j*dim] * get_del_aij(g, J, i,j) ;
+	  //printf("J=%d, i=%d, j=%d, del_aij=%f\n", J,i,j,get_del_aij(g, J, i,j));
+	}
+      }
+    }
+  }
+  //print_vector(stdout, rank, dg, "dg:");
+  return GSL_SUCCESS;
+}
+
+static void 
+simplicial_cone_update(double t)
 {
   int i,j;
   for ( i = 0; i < nfacet; i++){
@@ -592,6 +770,27 @@ get_del_bj(const double g[], int J, int j)
   return retv;
 }
 
+static void
+get_prob(double *g)
+{
+  double normal_const[dim+1];
+  const double sqrt_two_pi = sqrt(2*M_PI);
+  int i;
+  normal_const[0] = 1.0;
+  for (i = 0; i < dim; i++)
+    normal_const[i+1] = sqrt_two_pi * normal_const[i];
+
+  int J;
+  for ( J = 0; J < rank; J++){
+    int d = dim;
+    for ( i = 0; i < nfacet; i++)
+      if ( J & (1<<i))
+	d--;
+    g[J] *= det_alpha[J]/normal_const[d];
+  }
+  return;
+}
+
 static void 
 print_vector(FILE *fp, int length, double *v, char *str)
 {
@@ -615,6 +814,320 @@ print_matrix(FILE *fp, int nrow, int ncol, double *matrix, const char *str)
   }
 }    
 
+static void 
+numerical_experiment1(char **p)
+{
+  /* Input */
+  int d;
+  sscanf(*++p,"%d", &d);
+  //printf("d=%d\n", d);
+
+  int n = d+1;
+  double a_loc[d*n], b_loc[n];
+  int i,j;
+  for ( i = 0; i < n*d; i++)
+    a_loc[i] = 0.0;
+  for ( j = 0; j < d; j++){
+    a_loc[j+j*d] = 1.0;
+    a_loc[j+d*d] = -1.0;
+  }
+  double h_sqrtd = 0.5 * sqrt(d);
+  for ( i = 0; i < n; i++){
+    b_loc[i] = h_sqrtd;
+  }
+  //for ( i = 0; i < n; i++){
+  //  for ( j = 0; j < d; j++)
+  //    sscanf(*++p, "%lf", a_loc+j+i*d);
+  //  sscanf(*++p, "%lf", b_loc+i);
+  //}
+  //printf("a,b:\n");
+  //for ( i = 0; i < n; i++){
+  //  for ( j = 0; j < d; j++)
+  //    printf("%10.6f ", a_loc[j+i*d]);
+  //  printf("%10.6f\n", b_loc[i]);
+  //}
+
+  /* Setting global variables */
+  dim = d;
+  nfacet = dim + 1;
+  rank = (1 << nfacet) -1;
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[rank];
+  //double g[(1<<nfacet)];
+  //int size_a = dim2;
+  int size_b = nfacet;
+  int size_alpha=nfacet2;
+  int size_inv_alpha=(1<<nfacet)*nfacet2;
+  int size_det_alpha=(1<<nfacet);
+  int size_dgdb=rank*dim;
+  double work_space[size_b 
+                   +size_alpha 
+                   +size_inv_alpha 
+                   +size_det_alpha
+                   +size_dgdb];
+  double *w = work_space;
+  a = a_loc;           
+  b = w;          w += size_b;
+  a1 = a_loc;
+  b1 = b_loc;
+  dadt = NULL;
+  dbdt = b_loc;
+  alpha = w;      w += size_alpha;
+  inv_alpha = w;  w += size_inv_alpha;
+  det_alpha = w;  w += size_det_alpha;
+  dgdb = w;  w += size_dgdb;
+
+  //printf("dim = %d\n", dim);
+  //print_matrix(stdout, dim, nfacet, a1, "The value of matrix a:");
+  //print_vector(stdout, nfacet, b1, "The value of vector b:\n");
+  //printf("rank = %d\n", rank);
+
+  update_alpha();
+  //print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  update_inv_alpha();
+  //int J;
+  //printf("determinant: ");
+  //for(J = 0; J < rank; J++){
+    //char s[10];
+    //sprintf(s, "%d:", J);
+    //print_matrix(stdout, nfacet, nfacet, inv_alpha+J*nfacet2, s);
+    //printf("%g ", det_alpha[J]);
+  //}
+  //printf("\n");
+
+  simplex_init(g);
+  //print_vector(stdout, rank+1, g, "The initial value of g:\n");
+
+  simplex_rk(g);
+  //print_vector(stdout, rank, g, "output of runge-kutta:\n");
+
+  get_prob(g);
+  //print_vector(stdout, rank, g, "result:\n");
+
+  printf("probability= %20.18f\n", g[0]);
+  return;
+}
+
+static void 
+numerical_experiment2(char **p)
+{
+  /* Input */
+  int d;
+  sscanf(*++p,"%d", &d);
+  //printf("d=%d\n", d);
+
+  int n = d;
+  double a_loc[d*n], b_loc[n];
+  int i,j;
+  for ( i = 0; i < n*d; i++)
+    a_loc[i] = 0.0;
+  for ( i = 0; i < n; i++){
+    a_loc[i+i*d] = 1.0;
+    for ( j = i+1; j < d; j++){
+      a_loc[j+i*d] = 0.01 * (i+j+2);
+    }
+  }
+  double h_sqrtd = 0.5 * sqrt(d);
+  for ( i = 0; i < n; i++){
+    b_loc[i] = h_sqrtd;
+  }
+  //printf("a,b:\n");
+  //for ( i = 0; i < n; i++){
+  //  for ( j = 0; j < d; j++)
+      //printf("%10.6f ", a_loc[j+i*d]);
+    //printf("%10.6f\n", b_loc[i]);
+  // }
+
+  /* Setting global variables */
+  dim = d;
+  nfacet = d;
+  rank = (1 << nfacet);
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[(1<<nfacet)];
+  g[rank] = 0.0;
+  int size_a = dim*nfacet;
+  int size_b = nfacet;
+  int size_alpha=nfacet2; 
+  int size_inv_alpha=(1<<nfacet)*nfacet2;
+  int size_det_alpha=(1<<nfacet);
+  int size_dgdb=rank*dim;
+  double work_space[3*size_a
+                   +2*size_b 
+                   +size_alpha 
+                   +size_inv_alpha 
+                   +size_det_alpha
+                   +size_dgdb];
+  double *w = work_space;
+  a = w;     w += size_a;
+  b = w;     w += size_b;
+  a0 = w;     w += size_a;
+  b0 = w;     w += size_b;
+  a1 = a_loc;
+  b1 = b_loc;
+  dadt = w;  w += size_a;
+  dbdt = b_loc;
+  alpha = w; w += size_alpha;
+  inv_alpha = w; w += size_inv_alpha;
+  det_alpha = w; w += size_det_alpha;
+  dgdb = w;  w += size_dgdb;
+
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++)
+      a0[j+i*dim] = (i==j)? 1.0 : 0.0;
+    b0[i] = 0.0;
+  }
+
+  //printf("dim = %d\n", dim);
+  //print_matrix(stdout, dim, nfacet, a0, "The value of matrix a0:");
+  //print_vector(stdout, nfacet, b0, "The value of vector b0:\n");
+  //print_matrix(stdout, dim, nfacet, a1, "The value of matrix a1:");
+  //print_vector(stdout, nfacet, b1, "The value of vector b1:\n");
+  //printf("rank = %d\n", rank);
+
+  for ( i = 0; i < dim; i++)
+    for ( j = 0; j < nfacet; j++)
+      dadt[i+j*dim] = -a0[i+j*dim]+a1[i+j*dim];
+  //print_matrix(stdout, dim, nfacet, dadt, "dadt:");
+
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++)
+      a[j+i*dim] = a0[j+i*dim];
+    b[i] = b0[i];
+  }
+
+  update_alpha();
+  //print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  update_inv_alpha();
+  //int J;
+  //printf("determinant: ");
+  //for(J = 0; J < rank; J++){
+    //char s[10];
+    //sprintf(s, "%d:", J);
+    //print_matrix(stdout, nfacet, nfacet, inv_alpha+J*nfacet2, s);
+    //printf("%g ", det_alpha[J]);
+  //}
+  //printf("\n");
+
+  simplicial_cone_init(g);
+  //print_vector(stdout, rank+1, g, "The initial value of g:\n");
+
+  simplicial_cone_rk(g);
+  //print_vector(stdout, rank, g, "output of runge-kutta:\n");
+
+  get_prob(g);
+  //print_vector(stdout, rank, g, "result:\n");
+
+  printf("probability= %20.18f\n", g[0]);
+  return;
+}
+
+static void 
+numerical_experiment3(char **p)
+{
+  /* Input */
+  int d;
+  sscanf(*++p,"%d", &d);
+  //printf("d=%d\n", d);
+
+  int n = d+1;
+  double a_loc[d*n], b_loc[n];
+  int i,j;
+  for ( i = 0; i < n*d; i++)
+    a_loc[i] = 0.0;
+  for ( j = 0; j < d; j++){
+    a_loc[j+j*d] = 1.0;
+    a_loc[j+d*d] = -1.0;
+  }
+  double h_sqrtd = 0.5 * sqrt(d);
+  for ( i = 0; i < n-1; i++){
+    b_loc[i] = (-1.0) * h_sqrtd;
+  }
+  b_loc[n-1] = (d+0.5) * sqrt(d);
+  //for ( i = 0; i < n; i++){
+  //  for ( j = 0; j < d; j++)
+  //    sscanf(*++p, "%lf", a_loc+j+i*d);
+  //  sscanf(*++p, "%lf", b_loc+i);
+  //}
+  //printf("a,b:\n");
+  //for ( i = 0; i < n; i++){
+  //  for ( j = 0; j < d; j++)
+  //    printf("%10.6f ", a_loc[j+i*d]);
+  //  printf("%10.6f\n", b_loc[i]);
+  //}
+
+  /* Setting global variables */
+  dim = d;
+  nfacet = dim + 1;
+  rank = (1 << nfacet) -1;
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[rank];
+  //double g[(1<<nfacet)];
+  //int size_a = dim2;
+  int size_b = nfacet;
+  int size_alpha=nfacet2;
+  int size_inv_alpha=(1<<nfacet)*nfacet2;
+  int size_det_alpha=(1<<nfacet);
+  int size_dgdb=rank*dim;
+  double work_space[size_b 
+                   +size_alpha 
+                   +size_inv_alpha 
+                   +size_det_alpha
+                   +size_dgdb];
+  double *w = work_space;
+  a = a_loc;           
+  b = w;          w += size_b;
+  a1 = a_loc;
+  b1 = b_loc;
+  dadt = NULL;
+  dbdt = b_loc;
+  alpha = w;      w += size_alpha;
+  inv_alpha = w;  w += size_inv_alpha;
+  det_alpha = w;  w += size_det_alpha;
+  dgdb = w;  w += size_dgdb;
+
+  //printf("dim = %d\n", dim);
+  //print_matrix(stdout, dim, nfacet, a1, "The value of matrix a:");
+  //print_vector(stdout, nfacet, b1, "The value of vector b:\n");
+  //printf("rank = %d\n", rank);
+
+  update_alpha();
+  //print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  update_inv_alpha();
+  //int J;
+  //printf("determinant: ");
+  //for(J = 0; J < rank; J++){
+    //char s[10];
+    //sprintf(s, "%d:", J);
+    //print_matrix(stdout, nfacet, nfacet, inv_alpha+J*nfacet2, s);
+    //printf("%g ", det_alpha[J]);
+  //}
+  //printf("\n");
+
+  simplex_init(g);
+  //print_vector(stdout, rank+1, g, "The initial value of g:\n");
+
+  simplex_rk(g);
+  //print_vector(stdout, rank, g, "output of runge-kutta:\n");
+
+  get_prob(g);
+  //print_vector(stdout, rank, g, "result:\n");
+
+  printf("probability= %20.18e\n", g[0]);
+  return;
+}
+
 int 
 main(int argc, char *argv[])
 {
@@ -628,7 +1141,19 @@ main(int argc, char *argv[])
     simplex(p);
     break;
   case 2:
+    simplicial_cone(p);
+    break;
+  case 3:
     simplex2(p);
+    break;
+  case 11:
+    numerical_experiment1(p);
+    break;
+  case 12:
+    numerical_experiment2(p);
+    break;
+  case 13:
+    numerical_experiment3(p);
     break;
   default:
     fprintf(stderr, "Error\n");
