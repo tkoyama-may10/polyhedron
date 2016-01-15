@@ -65,6 +65,7 @@ static void print_matrix(FILE *fp, int nrow, int ncol, double *matrix,const char
 static void numerical_experiment1(char **);
 static void numerical_experiment2(char **);
 static void numerical_experiment3(char **);
+static void numerical_experiment4(char **);
 
 static void 
 simplex(char **p)
@@ -1128,6 +1129,121 @@ numerical_experiment3(char **p)
   return;
 }
 
+static void 
+numerical_experiment4(char **p)
+{
+  /* Input */
+  int d;
+  double c0;
+  sscanf(*++p,"%d", &d);
+  sscanf(*++p,"%lf", &c0);
+  //printf("d=%d\n", d);
+  d = d - 1;
+
+  int n = d+1;
+  double a_loc[d*n], b_loc[n];
+  int i,j;
+  for ( i = 0; i < n*d; i++)
+    a_loc[i] = 0.0;
+  a_loc[0] = sqrt(2.0);
+  for ( i = 1; i < d; i++){
+    a_loc[i-1+i*d] = -sqrt(i);
+    a_loc[i+i*d] = sqrt(i+2);
+  }
+  for ( j = 0; j < d-1; j++){
+    a_loc[j+d*d] = -1.0/sqrt((j+1)*(j+2));
+  }
+  a_loc[d-1+d*d] = -(d+1.0)/sqrt(d*(d+1));
+  double h_sqrtd = 0.5 * sqrt(d);
+  for ( i = 0; i < n-1; i++){
+    b_loc[i] = 0.0;
+  }
+  b_loc[n-1] = c0;
+  //for ( i = 0; i < n; i++){
+  //  for ( j = 0; j < d; j++)
+  //    sscanf(*++p, "%lf", a_loc+j+i*d);
+  //  sscanf(*++p, "%lf", b_loc+i);
+  //}
+
+  //printf("a,b:\n");
+  //for ( i = 0; i < n; i++){
+  //  for ( j = 0; j < d; j++)
+  //    printf("%10.6f ", a_loc[j+i*d]);
+  //  printf("%10.6f\n", b_loc[i]);
+  //}
+
+  /* Setting global variables */
+  dim = d;
+  nfacet = dim + 1;
+  rank = (1 << nfacet) -1;
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[rank];
+  //double g[(1<<nfacet)];
+  //int size_a = dim2;
+  int size_b = nfacet;
+  int size_alpha=nfacet2;
+  int size_inv_alpha=(1<<nfacet)*nfacet2;
+  int size_det_alpha=(1<<nfacet);
+  int size_dgdb=rank*dim;
+  double work_space[size_b 
+                   +size_alpha 
+                   +size_inv_alpha 
+                   +size_det_alpha
+                   +size_dgdb];
+  double *w = work_space;
+  a = a_loc;           
+  b = w;          w += size_b;
+  a1 = a_loc;
+  b1 = b_loc;
+  dadt = NULL;
+  dbdt = b_loc;
+  alpha = w;      w += size_alpha;
+  inv_alpha = w;  w += size_inv_alpha;
+  det_alpha = w;  w += size_det_alpha;
+  dgdb = w;  w += size_dgdb;
+
+  //printf("dim = %d\n", dim);
+  //print_matrix(stdout, dim, nfacet, a1, "The value of matrix a:");
+  //print_vector(stdout, nfacet, b1, "The value of vector b:\n");
+  //printf("rank = %d\n", rank);
+
+  update_alpha();
+  //print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  update_inv_alpha();
+  //int J;
+  //printf("determinant: ");
+  //for(J = 0; J < rank; J++){
+    //char s[10];
+    //sprintf(s, "%d:", J);
+    //print_matrix(stdout, nfacet, nfacet, inv_alpha+J*nfacet2, s);
+    //printf("%g ", det_alpha[J]);
+  //}
+  //printf("\n");
+
+  simplex_init(g);
+  //print_vector(stdout, rank+1, g, "The initial value of g:\n");
+
+  double factorial_d=1.0;
+  for ( i = 0; i < d+1; i++)
+    factorial_d *= (i+1);
+  for ( i = 0; i < rank; i++)
+    g[i] *= factorial_d;
+  //print_vector(stdout, rank+1, g, "The initial value of g:\n");
+
+  simplex_rk(g);
+  //print_vector(stdout, rank, g, "output of runge-kutta:\n");
+
+  get_prob(g);
+  //print_vector(stdout, rank, g, "result:\n");
+
+  printf("probability= %20.18g\n", g[0]);
+  return;
+}
+
 int 
 main(int argc, char *argv[])
 {
@@ -1154,6 +1270,9 @@ main(int argc, char *argv[])
     break;
   case 13:
     numerical_experiment3(p);
+    break;
+  case 14:
+    numerical_experiment4(p);
     break;
   default:
     fprintf(stderr, "Error\n");
