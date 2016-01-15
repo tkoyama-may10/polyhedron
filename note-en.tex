@@ -1,7 +1,7 @@
 %%
 %% In this note, we explain how to generate the low data in our paper
 %% ``Holonomic gradient method for the probability content of a simplex region
-%% with a multivariate normal distribution''
+%% under a multivariate normal distribution''
 %%
 %% To compile this TeX file, simply type the following command:
 %%     latex note-en.tex && latex note-en.tex
@@ -76,7 +76,7 @@ In this note, we explain how to generate the low data in our paper
 For our numerical experiments, we prepared 
 C program {\tt program.c}, 
 shell scripts \\{\tt numerical\_experiment.sh}, 
-and {\tt R} scripts {\tt monte\_carlo.R}.
+and {\tt R} scripts {\tt monte\_carlo.R}, {\tt dist\_func.R}.
 Our computer system is linux(debian), and we utilized GNU scientific library
 BLAS, and {\tt R}.
 The source file {\tt program.c} can be compiled by the following command:
@@ -90,9 +90,11 @@ In our numerical experiments, we generated the following files:
 {\tt tab3.tex}, 
 {\tt tab2.tex}, 
 {\tt tab1.tex}, 
+{\tt raw\_data4.txt}, 
 {\tt raw\_data3.txt}, 
 {\tt raw\_data2.txt}, 
-{\tt raw\_data1.txt}.
+{\tt raw\_data1.txt},
+{\tt fig1.eps}.
 
 \section{Synopsis}
 \begin{verbatim}
@@ -129,6 +131,8 @@ $f_j(a,b,x)=\sum_{i=1}^da_{ij}x_i+b_j$.
     Generate data for Table 3.
     \item \verb+S=13+\ : %%    numerical_experiment3(p);
     Generate data for Table 2.
+    \item \verb+S=14+\ : %%    numerical_experiment4(p);
+    Generate data for Figure 1.
   \end{itemize}
 \item \verb+d+\/: Dimension.
 \item \verb+a_11,...+\/: Parameters $a_{ij}$.
@@ -141,9 +145,12 @@ The following command generates the low data
 {\tt tab3.tex}, 
 {\tt tab2.tex}, 
 {\tt tab1.tex}, 
+{\tt raw\_data4.txt}, 
 {\tt raw\_data3.txt}, 
-{\tt raw\_data2.txt}, and
-{\tt raw\_data1.txt}:
+{\tt raw\_data2.txt},
+{\tt raw\_data1.txt}, and
+{\tt fig1.eps}:
+
 \begin{lstlisting}[style=BashInputStyle]
 
 gcc program.c -lm -lgsl -lblas
