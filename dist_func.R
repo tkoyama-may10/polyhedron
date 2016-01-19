@@ -11,7 +11,7 @@ points <- seq(0,6, by=0.5)
 i <- 1:13
 
 
-postscript(file="./fig1.eps",width=5,height=5,horizontal=FALSE,onefile=FALSE,paper="special",family="Helvetica")
+postscript(file="./fig3.eps",width=5,height=5,horizontal=FALSE,onefile=FALSE,paper="special",family="Helvetica")
 par(new=F)
 plot(points, mat[i,1], ylim=c(0.0,1.0), xlab="c", ylab="P(c)", lty=1,type="b")
 par(new=T)
