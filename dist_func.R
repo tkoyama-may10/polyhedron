@@ -13,7 +13,7 @@ i <- 1:13
 
 postscript(file="./fig3.eps",width=5,height=5,horizontal=FALSE,onefile=FALSE,paper="special",family="Helvetica")
 par(new=F)
-plot(points, mat[i,1], ylim=c(0.0,1.0), xlab="c", ylab="P(c)", lty=1,type="b")
+plot(points, mat[i,1], ylim=c(0.0,1.0), xlab="c", ylab="F(c)", lty=1,type="b")
 par(new=T)
 plot(points, mat[i,2], ylim=c(0.0,1.0), xlab="", ylab="",lty=2, type="b",xaxt="n",yaxt="n")
 par(new=T)
