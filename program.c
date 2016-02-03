@@ -5,6 +5,9 @@
 
 #define RK_ACCURACY 1e-08
 #define GSL_ODEIV_STEP_TYPE gsl_odeiv_step_rkf45
+//#define GSL_ODEIV_STEP_TYPE gsl_odeiv_step_rk8pd
+
+#define INV_SQRT_TWO_PI 0.39894228040143270286 /* = 1.0/sqrt(2*pi) */
 
 /* from lapack, to compute inverse matricies. */
 //extern void dgetrf_(int *m, int *n, double *a, int *lda, int *ipiv, int *info);
@@ -12,7 +15,6 @@
 //                    int *ipiv, double *b, int *ldb, int *info);
 extern void dpotrf_(char *uplo, int *n, double *a, int *lda, int *info);
 extern void dpotri_(char *uplo, int *n, double *a, int *lda, int *info);
-
 
 static int dim = 0; 
 static int dim2 = 0; 
@@ -49,9 +51,20 @@ static void simplicial_cone_rk(double *g);
 static int simplicial_cone_function(double t, const double g[], double dg[], void *params);
 static void simplicial_cone_update(double t);
 
+static void tukey(char **);
+static void tukey_rk(double *g);
+static int tukey_function(double t, const double g[], double dg[], void *params);
+static void tukey2(char **);
+static void tukey2_rk(double *g);
+static int tukey2_function(double t, const double g[], double dg[], void *params);
+static void tukey3(char **);
+static void tukey3_rk(double *g);
+static int tukey3_function(double t, const double g[], double dg[], void *params);
+
 static void update_alpha(void);
 static void update_inv_alpha(void);
 static int inv_submat_alpha(int i, double *inv_submat);
+static int inv_submat_alpha2(int i,int j, double *inv_submat, double *det_submat);
 static int cardinality(int J, const int max);
 static double get_del_aij(const double g[], int J, int i, int j);
 static double get_del_bibj(const double g[], int J, int i, int j);
@@ -586,6 +599,480 @@ simplicial_cone_update(double t)
   update_inv_alpha();
 }
 
+static void
+tukey(char **p)
+{
+  /* Input */
+  int d;
+  sscanf(*++p,"%d", &d);
+  printf("d=%d\n", d);
+  double c;
+  sscanf(*++p, "%lf", &c);
+  printf("c=%f\n", c);
+
+  /* Setting global variables */
+  dim = d-1;
+  nfacet = d;
+  rank = (1<<nfacet)-1;
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[nfacet2];
+  int size_a = dim*nfacet;
+  int size_alpha=nfacet2;
+  int size_b = 3*nfacet2; /* b <- C_ijk */
+  double work_space[size_a
+                   +size_alpha
+                   +size_b];
+  double *w = work_space;
+  a = w;          w += size_a;
+  alpha = w;      w += size_alpha;
+  b = w; 
+
+  /* a[j+i*dim] <- (transpose matrix of a in our paper) */
+  int i,j,k;
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++){
+      a[j+i*dim] = 0.0;
+    }
+  }
+  for ( i = 0; i < d-1; i++)
+    a[i+i*dim] = sqrt(i+2);
+  for ( i = 0; i < d-2; i++){
+    a[i+(i+1)*dim] = -sqrt(i+1);
+    a[i+(d-1)*dim] = -1.0/sqrt((i+1)*(i+2));
+  }
+  a[(d-2)+(d-1)*dim] = -sqrt((double) d/(d-1));
+  printf("dim = %d\n", dim);
+  //print_matrix(stdout, dim, nfacet, a, "The value of matrix a:");
+
+  /* alpha <- a^\top a*/
+  update_alpha();
+  //print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  /* fac_d <- d! */
+  double fac_d = 1.0;
+  for ( i = 0; i < d; i++){
+    fac_d *= (i+1.0);
+  }
+  printf("d!=%g\n", 1.0 * fac_d);
+
+  /* b <- C_ijk, g <- initial value */
+  for ( i = 0; i < size_b; i++) b[i] = 0.0;
+  for (i = 0; i < nfacet2; i++) g[i] = 0.0;
+  b[0] = c;
+  for ( i = 0; i < d-1; i++)
+    for ( j = i+1; j < d; j++){
+      double *b_ij = b + 3*(j+i*nfacet);
+      //fprintf(stderr, "done %d\n",nfacet2);
+      double inv[nfacet2], det;
+      //fprintf(stderr, "done\n");
+      inv_submat_alpha2(i,j, inv, &det );      
+
+      /* g <- initial value */
+      if ( j == i+1){
+        g[i+j*nfacet] = fac_d/det;
+      }
+
+      /* b <- C_ijk */
+      b_ij[0] = -inv[(d-1)+(d-1)*nfacet];
+
+      if ( i+1 != j){
+        b_ij[1] = 0.0;
+        b_ij[2] = 0.0;
+        for ( k = 0; k < i; k++){
+	  b_ij[1] += -inv[(d-1)+k*nfacet]*alpha[k+i*nfacet];
+	  b_ij[2] += -inv[(d-1)+k*nfacet]*alpha[k+(j-1)*nfacet];
+        }
+        for ( k = j; k < d; k++){
+	  b_ij[1] += -inv[(d-1)+k*nfacet]*alpha[k+i*nfacet];
+	  b_ij[2] += -inv[(d-1)+k*nfacet]*alpha[k+(j-1)*nfacet];
+        }
+        b_ij[1] *= INV_SQRT_TWO_PI;
+        b_ij[2] *= INV_SQRT_TWO_PI;
+      } else {
+        b_ij[1] = 0.0;
+        b_ij[2] = 0.0;
+      }
+      //printf("i,j %d %d,", i+1, j+1);
+      //printf(" %g, %g, %g\n", b_ij[0],b_ij[1],b_ij[2]);
+      //printf(" %d, %d, %d\n", 0+3*(j+i*nfacet),1+3*(j+i*nfacet),2+3*(j+i*nfacet));
+    }
+  //print_matrix(stdout, nfacet, nfacet, g, "The initial value of g:");
+  tukey_rk(g);
+  //print_matrix(stdout, nfacet, nfacet, g, "output of runge-kutta:");
+
+  printf("Probability = %20.18g\n", 1-g[0]);
+  return;
+}
+
+static void 
+tukey_rk(double *g)
+{
+  double h = RK_ACCURACY;
+  const gsl_odeiv_step_type *T = GSL_ODEIV_STEP_TYPE;
+  gsl_odeiv_step *s  = gsl_odeiv_step_alloc (T, nfacet2);
+  gsl_odeiv_control * c = gsl_odeiv_control_y_new (h, 0.0);
+  gsl_odeiv_evolve * e = gsl_odeiv_evolve_alloc (nfacet2);
+  gsl_odeiv_system sys = {tukey_function, NULL, nfacet2, NULL};
+
+  double t = 0.0, t1 = b[0];
+    while (t < t1){
+    int status = gsl_odeiv_evolve_apply (e, c, s, &sys, &t, t1, &h, g);
+    if (status != GSL_SUCCESS)
+      break;
+    //fprintf(stderr, "%lf %lf\n",t, g[0]);
+    //print_vector(stdout, rank+1, g, "\n");
+  }
+  /* free */
+  gsl_odeiv_evolve_free (e);
+  gsl_odeiv_control_free (c);
+  gsl_odeiv_step_free (s);
+  return;
+}
+
+static int 
+tukey_function(double t, const double g[], double dg[], void *params)
+{
+  int d = nfacet;
+  dg[0] = INV_SQRT_TWO_PI * g[(d-1)*nfacet];
+
+  int i,j;
+  double *b_ij;
+  for ( i = 0; i < d-1; i++)
+    for ( j = i+1; j < d; j++){
+      b_ij  = b + 3*(j+i*nfacet);
+      dg[i+j*nfacet]  = t* b_ij[0] * g[i+j*nfacet];
+      if ( i+1 != j){
+        dg[i+j*nfacet] +=    b_ij[1] * g[(i+1)+j*nfacet];
+        dg[i+j*nfacet] +=    b_ij[2] * g[i+(j-1)*nfacet];
+      }
+    }
+  return GSL_SUCCESS;
+}
+
+static void
+tukey2(char **p)
+{
+  /* Input */
+  int d;
+  sscanf(*++p,"%d", &d);
+  printf("d=%d\n", d);
+  double c;
+  sscanf(*++p, "%lf", &c);
+  printf("c=%f\n", c);
+
+  /* Setting global variables */
+  dim = d-1;
+  nfacet = d;
+  rank = (1<<nfacet)-1;
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[nfacet2];
+  int size_a = dim*nfacet;
+  int size_alpha=nfacet2;
+  int size_b = 3*nfacet2; /* b <- C_ijk */
+  double work_space[size_a
+                   +size_alpha
+                   +size_b];
+  double *w = work_space;
+  a = w;          w += size_a;
+  alpha = w;      w += size_alpha;
+  b = w; 
+
+  /* a[j+i*dim] <- (transpose matrix of a in our paper) */
+  int i,j,k;
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++){
+      a[j+i*dim] = 0.0;
+    }
+  }
+  for ( i = 0; i < d-1; i++)
+    a[i+i*dim] = sqrt(i+2);
+  for ( i = 0; i < d-2; i++){
+    a[i+(i+1)*dim] = -sqrt(i+1);
+    a[i+(d-1)*dim] = -1.0/sqrt((i+1)*(i+2));
+  }
+  a[(d-2)+(d-1)*dim] = -sqrt((double) d/(d-1));
+  printf("dim = %d\n", dim);
+  //print_matrix(stdout, dim, nfacet, a, "The value of matrix a:");
+
+  /* alpha <- a^\top a*/
+  update_alpha();
+  //print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  for ( i = 0; i < nfacet*dim; i++) a[i] = 0.0;
+
+  double inv[nfacet2], det;
+  /* b <- C_ijk, g <- initial value */
+  for ( i = 0; i < size_b; i++) b[i] = 0.0;
+  for (i = 0; i < nfacet2; i++) g[i] = 0.0;
+
+  for( i = d-2; i > -1; i--)  //for ( i = 0; i < d-1; i++)
+    for ( j = i+1; j < d; j++){
+      /* g <- initial value */
+      if ( j == i+1){
+        g[i+j*nfacet] = 1.0;
+      }
+
+      double *b_ij = b + 3*(j+i*nfacet);
+      inv_submat_alpha2(i,j, inv, &det );
+      a[i+j*dim] = det;
+      //printf("det %d %d %lf %d\n", i+1,j+1,det,i+j*dim);
+
+      /* b <- C_ijk */
+      b_ij[0] = -inv[(d-1)+(d-1)*nfacet];
+
+      if ( i+1 != j){
+        b_ij[1] = 0.0;
+        b_ij[2] = 0.0;
+        for ( k = 0; k < i; k++){
+	  b_ij[1] += -inv[(d-1)+k*nfacet]*alpha[k+i*nfacet];
+	  b_ij[2] += -inv[(d-1)+k*nfacet]*alpha[k+(j-1)*nfacet];
+        }
+        for ( k = j; k < d; k++){
+	  b_ij[1] += -inv[(d-1)+k*nfacet]*alpha[k+i*nfacet];
+	  b_ij[2] += -inv[(d-1)+k*nfacet]*alpha[k+(j-1)*nfacet];
+        }
+        b_ij[1] *= (j-i)*INV_SQRT_TWO_PI*a[i+j*dim]/a[(i+1)+j*dim];
+        b_ij[2] *= (j-i)*INV_SQRT_TWO_PI*a[i+j*dim]/a[i+(j-1)*dim];
+      } else {
+        b_ij[1] = 0.0;
+        b_ij[2] = 0.0;
+      }
+      printf("i,j %d %d,", i+1, j+1);
+      printf(" %g, %g, %g\n", b_ij[0],b_ij[1],b_ij[2]);
+      printf(" %d, %d, %d\n", 0+3*(j+i*dim),1+3*(j+i*dim),2+3*(j+i*dim));
+    }
+  //for ( i = 0; i < nfacet*dim; i++) a[i] = i;
+  //print_matrix(stdout, dim, nfacet, a, "determinants a:");
+  b[0] = d*INV_SQRT_TWO_PI/sqrt(alpha[nfacet2-1]);
+  //print_vector(stdout, 3*nfacet2, b, "b");
+
+  //print_matrix(stdout, nfacet, nfacet, g, "The initial value of g:");
+  a[0] = c;
+  tukey2_rk(g);
+  //print_matrix(stdout, nfacet, nfacet, g, "output of runge-kutta:");
+
+  printf("err = %20.18g\n", 1-g[0]);
+  //printf("Probability = %20.18g\n", g[0]);
+  return;
+}
+
+static void 
+tukey2_rk(double *g)
+{
+  double h = RK_ACCURACY;
+  const gsl_odeiv_step_type *T = GSL_ODEIV_STEP_TYPE;
+  gsl_odeiv_step *s  = gsl_odeiv_step_alloc (T, nfacet2);
+  gsl_odeiv_control * c = gsl_odeiv_control_y_new (h, 0.0);
+  gsl_odeiv_evolve * e = gsl_odeiv_evolve_alloc (nfacet2);
+  gsl_odeiv_system sys = {tukey2_function, NULL, nfacet2, NULL};
+
+  double t = 0.0, t1 = a[0];
+    while (t < t1){
+    int status = gsl_odeiv_evolve_apply (e, c, s, &sys, &t, t1, &h, g);
+    if (status != GSL_SUCCESS)
+      break;
+    //fprintf(stderr, "%lf %lf\n",t, g[0]);
+    //print_vector(stderr, nfacet2, g, "");
+  }
+  /* free */
+  gsl_odeiv_evolve_free (e);
+  gsl_odeiv_control_free (c);
+  gsl_odeiv_step_free (s);
+  return;
+}
+
+static int 
+tukey2_function(double t, const double g[], double dg[], void *params)
+{
+  int d = nfacet;
+  dg[0] = b[0] * g[(d-1)*nfacet];
+
+  int i,j;
+  double *b_ij;
+  for ( i = 0; i < d-1; i++)
+    for ( j = i+1; j < d; j++){
+      b_ij  = b + 3*(j+i*nfacet);
+      dg[i+j*nfacet]  = t* b_ij[0] * g[i+j*nfacet];
+      if ( i+1 != j){
+        dg[i+j*nfacet] +=    b_ij[1] * g[(i+1)+j*nfacet];
+        dg[i+j*nfacet] +=    b_ij[2] * g[i+(j-1)*nfacet];
+      }
+    }
+  return GSL_SUCCESS;
+}
+
+static void
+tukey3(char **p)
+{
+  /* Input */
+  int d;
+  sscanf(*++p,"%d", &d);
+  printf("d=%d\n", d);
+  double c;
+  sscanf(*++p, "%lf", &c);
+  printf("c=%f\n", c);
+
+  /* Setting global variables */
+  dim = d-1;
+  nfacet = d;
+  rank = (1<<nfacet)-1;
+
+  dim2 = dim * dim;
+  nfacet2 = nfacet*nfacet;
+
+  double g[nfacet2];
+  int size_a = nfacet2; //dim*nfacet;
+  int size_alpha=nfacet2;
+  int size_b = 5*nfacet2; /* b <- C_ijk */
+  double work_space[size_a
+                   +size_alpha
+                   +size_b];
+  double *w = work_space;
+  a = w;          w += size_a;
+  alpha = w;      w += size_alpha;
+  b = w; 
+
+  /* a[j+i*dim] <- (transpose matrix of a in our paper) */
+  int i,j,k;
+  for ( i = 0; i < nfacet; i++){
+    for ( j = 0; j < dim; j++){
+      a[j+i*dim] = 0.0;
+    }
+  }
+  for ( i = 0; i < d-1; i++)
+    a[i+i*dim] = sqrt(i+2);
+  for ( i = 0; i < d-2; i++){
+    a[i+(i+1)*dim] = -sqrt(i+1);
+    a[i+(d-1)*dim] = -1.0/sqrt((i+1)*(i+2));
+  }
+  a[(d-2)+(d-1)*dim] = -sqrt((double) d/(d-1));
+  printf("dim = %d\n", dim);
+  //print_matrix(stdout, dim, nfacet, a, "The value of matrix a:");
+
+  /* alpha <- a^\top a*/
+  update_alpha();
+  //print_matrix(stdout, nfacet, nfacet, alpha, "The value of matrix alpha:");
+
+  //for ( i = 0; i < nfacet*dim; i++) a[i] = 0.0;
+
+  /* b <- C_ijk, g <- initial value */
+  for ( i = 0; i < size_b; i++) b[i] = 0.0;
+  for (i = 0; i < nfacet2; i++) g[i] = 0.0;
+  g[0] = 0.0;
+  double inv[nfacet2], det, lambda[dim*nfacet];
+  for( i = d-2; i > -1; i--)  //for ( i = 0; i < d-1; i++)
+    for ( j = i+1; j < d; j++){
+      /* g <- initial value */
+      if ( j == i+1){
+        g[i+j*nfacet] = 1.0;
+      }
+
+      double *b_ij = b + 5*(j+i*nfacet);
+      inv_submat_alpha2(i,j, inv, &det );
+      a[i+j*dim] = det;
+      lambda[i+j*dim] = inv[(d-1)+(d-1)*nfacet];
+      //printf("i=%d j=%d det=%lf %d ", i+1,j+1,det,i+j*dim);
+      //printf("lambda=%lf %d\n", lambda[j+i*dim],j+i*dim);
+
+      /* b <- C_ijk */
+      b_ij[0] = 0.0;
+      //b_ij[0] = -inv[(d-1)+(d-1)*nfacet] + lambda[i+j*dim];
+      //printf("b_ij=%lf\n",b_ij[0]);
+
+      if ( i+1 != j){
+        b_ij[1] = 0.0;
+        b_ij[2] = 0.0;
+        for ( k = 0; k < i; k++){
+	  b_ij[1] += -inv[(d-1)+k*nfacet]*alpha[k+i*nfacet];
+	  b_ij[2] += -inv[(d-1)+k*nfacet]*alpha[k+(j-1)*nfacet];
+        }
+        for ( k = j; k < d; k++){
+	  b_ij[1] += -inv[(d-1)+k*nfacet]*alpha[k+i*nfacet];
+	  b_ij[2] += -inv[(d-1)+k*nfacet]*alpha[k+(j-1)*nfacet];
+        }
+        b_ij[1] *= (j-i-1)*INV_SQRT_TWO_PI*a[i+j*dim]/a[(i+1)+j*dim];
+        b_ij[2] *= (j-i-1)*INV_SQRT_TWO_PI*a[i+j*dim]/a[i+(j-1)*dim];
+        b_ij[3] = -0.5 * (lambda[i+1+j*dim] - lambda[i+j*dim]);
+        b_ij[4] = -0.5 * (lambda[i+(j-1)*dim] - lambda[i+j*dim]);
+      } else {
+        b_ij[1] = 0.0;
+        b_ij[2] = 0.0;
+        b_ij[3] = 0.0;
+        b_ij[4] = 0.0;
+      }
+      //printf("i,j:%2d %2d:", i+1, j+1);
+      //printf("%g\t%5.3g\t%5.3g\t%5.3g\t%5.3g\n", b_ij[0],b_ij[1],b_ij[2],b_ij[3],b_ij[4]);
+      //printf(" %d, %d, %d\n", 0+3*(j+i*dim),1+3*(j+i*dim),2+3*(j+i*dim));
+    }
+  b[0] = d*(d-1)*INV_SQRT_TWO_PI/sqrt(2.0); //sqrt(alpha[nfacet2-1]); /*2?*/
+  //printf("alpha[nfacet2-1]=%lf\n",alpha[nfacet2-1]);
+  b[1] = -0.25;
+  //print_matrix(stdout, nfacet, nfacet, a, "The value of matrix a:");
+  //print_matrix(stdout, nfacet, nfacet, g, "The initial value of g:");
+  a[0] = c;
+  tukey3_rk(g);
+  print_matrix(stdout, nfacet, nfacet, g, "output of runge-kutta:");
+  //print_vector(stdout, nfacet2, g, "output of runge-kutta:");
+
+  printf("err = %20.18g\n", 1.0-g[0]);
+  printf("Probability = %20.18g\n", g[0]);
+  return;
+}
+
+static void 
+tukey3_rk(double *g)
+{
+  double h = RK_ACCURACY;
+  const gsl_odeiv_step_type *T = GSL_ODEIV_STEP_TYPE;
+  gsl_odeiv_step *s  = gsl_odeiv_step_alloc (T, nfacet2);
+  gsl_odeiv_control * c = gsl_odeiv_control_y_new (h, 0.0);
+  gsl_odeiv_evolve * e = gsl_odeiv_evolve_alloc (nfacet2);
+  gsl_odeiv_system sys = {tukey3_function, NULL, nfacet2, NULL};
+
+  double t = 0.0, t1 = a[0];
+    while (t < t1){
+    int status = gsl_odeiv_evolve_apply (e, c, s, &sys, &t, t1, &h, g);
+    if (status != GSL_SUCCESS)
+      break;
+    //fprintf(stderr, "%lf %lf\n",t, g[0]);
+    fprintf(stderr, "%lf ",t);
+    print_vector(stderr, nfacet2, g, "");
+  }
+  /* free */
+  gsl_odeiv_evolve_free (e);
+  gsl_odeiv_control_free (c);
+  gsl_odeiv_step_free (s);
+  return;
+}
+
+static int 
+tukey3_function(double t, const double g[], double dg[], void *params)
+{
+  int d = nfacet;
+  double t2 = t*t;
+  dg[0] = b[0] * exp(t2*b[1]) * g[(d-1)*nfacet];
+
+  int i,j;
+  double *b_ij;
+  for ( i = 0; i < d-1; i++)
+    for ( j = i+1; j < d; j++){
+      b_ij  = b + 5*(j+i*nfacet);
+      //dg[i+j*nfacet]  = t* b_ij[0] * g[i+j*nfacet];
+      dg[i+j*nfacet]  = 0.0;
+      if ( i+1 != j){
+        dg[i+j*nfacet] += b_ij[1] * exp(b_ij[3]*t2) * g[(i+1)+j*nfacet];
+        dg[i+j*nfacet] += b_ij[2] * exp(b_ij[4]*t2) * g[i+(j-1)*nfacet];
+      }
+    }
+  return GSL_SUCCESS;
+}
+
 static void 
 update_alpha(void)
 {
@@ -640,6 +1127,7 @@ inv_submat_alpha(int I, double *inv)
       k++;
     }
 
+  /* mat <- cholesky decomposition of mat */
   int info, n, m;
   n = m = size_of_submat;
   dpotrf_("U", &n, mat, &m, &info);
@@ -648,11 +1136,9 @@ inv_submat_alpha(int I, double *inv)
     return info;
   }
 
-  //  /*
   det_alpha[I] = 1.0;
   for ( k = 0; k < size_of_submat; k++)
     det_alpha[I] *= mat[k*(size_of_submat+1)];
-  // */
 
   n = m = size_of_submat;
   dpotri_("U", &n, mat, &m, &info);
@@ -660,6 +1146,8 @@ inv_submat_alpha(int I, double *inv)
     printf("info:I=%d\n", I);
     return info;
   }
+
+  for ( i = 0; i<nfacet2; i++) inv[i] = 0.0;
 
   k = 0;
   for(i=0; i<nfacet; i++)
@@ -682,7 +1170,73 @@ inv_submat_alpha(int I, double *inv)
 	else
 	  inv[i+j*nfacet] = 0.0;
     }
+  return info;
+}
 
+static int
+inv_submat_alpha2(int ii, int jj, double *inv, double *det)
+{
+  //int size_of_submat = cardinality(I, nfacet);
+  int size_of_submat= ii - jj + nfacet;
+  //printf("\t ii,jj,d %d %d %d %d\n",ii+1,jj+1,d,size_of_submat);
+  
+  double mat[size_of_submat * size_of_submat];
+  int i,j,k,l;
+  k = 0;
+  for(i=0; i<nfacet; i++)
+    if( i<ii || i>jj-1){
+      l = 0;
+      for(j=0; j<nfacet; j++)
+	if( j<ii || j>jj-1){
+	  mat[l+k*size_of_submat] = alpha[i+j*nfacet];
+	  l++;
+	}
+      k++;
+    }
+
+  /* mat <- cholesky decomposition of mat */
+  int info, n, m;
+  n = m = size_of_submat;
+  dpotrf_("U", &n, mat, &m, &info);
+  if (info != 0) {
+    printf("info:(i,j)=(%d,%d)\n", ii,jj);
+    return info;
+  }
+
+  *det = 1.0;
+  for ( k = 0; k < size_of_submat; k++)
+    *det *= mat[k*(size_of_submat+1)];
+
+  n = m = size_of_submat;
+  dpotri_("U", &n, mat, &m, &info);
+  if (info != 0) {
+    printf("info:(i,j)=(%d,%d)\n", ii,jj);
+    return info;
+  }
+
+  for ( i = 0; i<nfacet2; i++) inv[i] = 0.0;
+
+  k = 0;
+  for(i=0; i<nfacet; i++)
+    if( i<ii || i>jj-1){
+      l = k;
+      for(j=i; j<nfacet; j++)
+	if( j<ii || j>jj-1){
+	  inv[i+j*nfacet] = inv[j+i*nfacet] = mat[k+l*size_of_submat];
+	  l++;
+	}else if(i==j){
+	  inv[i+j*nfacet] = 1.0;
+	}else{
+	  inv[i+j*nfacet] = 0.0;
+	}
+      k++;
+    }else{
+      for(j=0; j<nfacet; j++)
+	if(i==j)
+	  inv[i+j*nfacet] = 1.0;
+	else
+	  inv[i+j*nfacet] = 0.0;
+    }
   return info;
 }
 
@@ -1154,7 +1708,7 @@ numerical_experiment4(char **p)
     a_loc[j+d*d] = -1.0/sqrt((j+1)*(j+2));
   }
   a_loc[d-1+d*d] = -(d+1.0)/sqrt(d*(d+1));
-  double h_sqrtd = 0.5 * sqrt(d);
+  //double h_sqrtd = 0.5 * sqrt(d);
   for ( i = 0; i < n-1; i++){
     b_loc[i] = 0.0;
   }
@@ -1261,6 +1815,15 @@ main(int argc, char *argv[])
     break;
   case 3:
     simplex2(p);
+    break;
+  case 4:
+    tukey(p);
+    break;
+  case 5:
+    tukey2(p);
+    break;
+  case 6:
+    tukey3(p);
     break;
   case 11:
     numerical_experiment1(p);
