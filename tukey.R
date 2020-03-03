@@ -20,4 +20,4 @@
         lty = c(1,2,3,4)
        )
  dev.off()
- par(new=F)
+

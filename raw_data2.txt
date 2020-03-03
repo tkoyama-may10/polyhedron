@@ -9,12 +9,12 @@ dim=2
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1548
+	Maximum resident set size (kbytes): 4248
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 442
+	Minor (reclaiming a frame) page faults: 154
 	Voluntary context switches: 1
-	Involuntary context switches: 1
+	Involuntary context switches: 0
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -27,20 +27,20 @@ probability= 0.580821983992275026
 
 dim=3
 	Command being timed: "./a.out 12 3"
-	User time (seconds): 0.01
+	User time (seconds): 0.00
 	System time (seconds): 0.00
-	Percent of CPU this job got: 80%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.01
+	Percent of CPU this job got: 100%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.00
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1568
+	Maximum resident set size (kbytes): 4284
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 448
+	Minor (reclaiming a frame) page faults: 156
 	Voluntary context switches: 1
-	Involuntary context switches: 3
+	Involuntary context switches: 2
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -53,20 +53,20 @@ probability= 0.532131194764508653
 
 dim=4
 	Command being timed: "./a.out 12 4"
-	User time (seconds): 0.06
+	User time (seconds): 0.03
 	System time (seconds): 0.00
-	Percent of CPU this job got: 96%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.07
+	Percent of CPU this job got: 88%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.03
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1572
+	Maximum resident set size (kbytes): 4360
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 448
+	Minor (reclaiming a frame) page faults: 155
 	Voluntary context switches: 1
-	Involuntary context switches: 8
+	Involuntary context switches: 5
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -79,20 +79,20 @@ probability= 0.512853571578055556
 
 dim=5
 	Command being timed: "./a.out 12 5"
-	User time (seconds): 0.52
+	User time (seconds): 0.29
 	System time (seconds): 0.00
-	Percent of CPU this job got: 99%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.53
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:00.30
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1572
+	Maximum resident set size (kbytes): 4220
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 449
+	Minor (reclaiming a frame) page faults: 156
 	Voluntary context switches: 1
-	Involuntary context switches: 47
+	Involuntary context switches: 16
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -101,24 +101,24 @@ dim=5
 	Signals delivered: 0
 	Page size (bytes): 4096
 	Exit status: 0
-probability= 0.509868246217530352
+probability= 0.509868246217530796
 
 dim=6
 	Command being timed: "./a.out 12 6"
-	User time (seconds): 4.00
+	User time (seconds): 2.21
 	System time (seconds): 0.00
-	Percent of CPU this job got: 99%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:04.01
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:02.26
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1596
+	Maximum resident set size (kbytes): 4180
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 454
+	Minor (reclaiming a frame) page faults: 159
 	Voluntary context switches: 1
-	Involuntary context switches: 341
+	Involuntary context switches: 87
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -127,24 +127,24 @@ dim=6
 	Signals delivered: 0
 	Page size (bytes): 4096
 	Exit status: 0
-probability= 0.516601764024842591
+probability= 0.516601764024842480
 
 dim=7
 	Command being timed: "./a.out 12 7"
-	User time (seconds): 25.87
+	User time (seconds): 14.88
 	System time (seconds): 0.00
-	Percent of CPU this job got: 99%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:25.91
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:15.29
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1648
+	Maximum resident set size (kbytes): 4300
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 467
+	Minor (reclaiming a frame) page faults: 172
 	Voluntary context switches: 1
-	Involuntary context switches: 2196
+	Involuntary context switches: 738
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -153,24 +153,24 @@ dim=7
 	Signals delivered: 0
 	Page size (bytes): 4096
 	Exit status: 0
-probability= 0.529243193222438180
+probability= 0.529243193222438291
 
 dim=8
 	Command being timed: "./a.out 12 8"
-	User time (seconds): 147.46
-	System time (seconds): 0.00
-	Percent of CPU this job got: 99%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 2:27.65
+	User time (seconds): 82.28
+	System time (seconds): 0.02
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:24.25
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1732
+	Maximum resident set size (kbytes): 4376
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 488
+	Minor (reclaiming a frame) page faults: 196
 	Voluntary context switches: 1
-	Involuntary context switches: 12511
+	Involuntary context switches: 4303
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -179,24 +179,24 @@ dim=8
 	Signals delivered: 0
 	Page size (bytes): 4096
 	Exit status: 0
-probability= 0.545340032114786211
+probability= 0.545340032114785767
 
 dim=9
 	Command being timed: "./a.out 12 9"
-	User time (seconds): 771.60
-	System time (seconds): 0.07
-	Percent of CPU this job got: 99%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 12:52.68
+	User time (seconds): 431.08
+	System time (seconds): 0.13
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 7:22.04
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 1964
+	Maximum resident set size (kbytes): 4548
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 546
+	Minor (reclaiming a frame) page faults: 252
 	Voluntary context switches: 1
-	Involuntary context switches: 66072
+	Involuntary context switches: 22355
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -205,24 +205,24 @@ dim=9
 	Signals delivered: 0
 	Page size (bytes): 4096
 	Exit status: 0
-probability= 0.563203342455498301
+probability= 0.563203342455499412
 
 dim=10
 	Command being timed: "./a.out 12 10"
-	User time (seconds): 3804.66
-	System time (seconds): 1.05
-	Percent of CPU this job got: 99%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:03:30
+	User time (seconds): 2146.23
+	System time (seconds): 0.60
+	Percent of CPU this job got: 97%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 36:39.58
 	Average shared text size (kbytes): 0
 	Average unshared data size (kbytes): 0
 	Average stack size (kbytes): 0
 	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 2496
+	Maximum resident set size (kbytes): 5076
 	Average resident set size (kbytes): 0
 	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 680
+	Minor (reclaiming a frame) page faults: 383
 	Voluntary context switches: 1
-	Involuntary context switches: 324989
+	Involuntary context switches: 107978
 	Swaps: 0
 	File system inputs: 0
 	File system outputs: 8
@@ -231,5 +231,5 @@ dim=10
 	Signals delivered: 0
 	Page size (bytes): 4096
 	Exit status: 0
-probability= 0.581630439674587829
+probability= 0.581630439674588717
 

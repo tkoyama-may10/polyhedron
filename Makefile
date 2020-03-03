@@ -10,9 +10,11 @@ a.out: program.c
 note-en.pdf:note-en.tex
 	pdflatex note-en.tex && pdflatex note-en.tex
 
-.PHONY: clean run
+.PHONY: clean dist-clean
 
 clean:
-	rm -f a.out note-en.log note-en.aux note-en.pdf
-	rm -f *~
+	rm -f *aux *log *dvi  *~ 
+
+dist-clean: clean
+	rm -f a.out note-en.pdf
 

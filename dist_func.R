@@ -24,4 +24,5 @@ cols <-   c("black","black","black")
 pchs <-   c(1,1,1)
 ltys <-   c(1,2,3)
 legend("bottomright", legend = labels, col = cols, pch = pchs, lty=ltys)
+
 dev.off()

@@ -605,10 +605,10 @@ tukey(char **p)
   /* Input */
   int d;
   sscanf(*++p,"%d", &d);
-  printf("d=%d\n", d);
+  //printf("d=%d\n", d);
   double c;
   sscanf(*++p, "%lf", &c);
-  printf("c=%f\n", c);
+  //printf("c=%f\n", c);
 
   /* Setting global variables */
   dim = d-1;
@@ -644,7 +644,7 @@ tukey(char **p)
     a[i+(d-1)*dim] = -1.0/sqrt((i+1)*(i+2));
   }
   a[(d-2)+(d-1)*dim] = -sqrt((double) d/(d-1));
-  printf("dim = %d\n", dim);
+  //printf("dim = %d\n", dim);
   //print_matrix(stdout, dim, nfacet, a, "The value of matrix a:");
 
   /* alpha <- a^\top a*/
@@ -656,7 +656,7 @@ tukey(char **p)
   for ( i = 0; i < d; i++){
     fac_d *= (i+1.0);
   }
-  printf("d!=%g\n", 1.0 * fac_d);
+  //printf("d!=%g\n", 1.0 * fac_d);
 
   /* b <- C_ijk, g <- initial value */
   for ( i = 0; i < size_b; i++) b[i] = 0.0;
@@ -703,7 +703,8 @@ tukey(char **p)
   tukey_rk(g);
   //print_matrix(stdout, nfacet, nfacet, g, "output of runge-kutta:");
 
-  printf("Probability = %20.18g\n", 1-g[0]);
+  //printf("Probability = %20.18g\n", 1-g[0]);
+  printf("%20.18g\t", g[0]);
   return;
 }
 

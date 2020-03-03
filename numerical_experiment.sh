@@ -76,6 +76,21 @@ rm tmp
 R -f dist_func.R
 }
 
+tukey(){
+echo \# Probability function of Tukey\'s studentize range > tmp
+for c in 0.0 0.5 1.0 1.5  2.0 2.5  3.0 3.5  4.0  4.5 5.0 5.5  6.0 
+do
+ echo -n $c\ >> tmp\
+     && ./a.out 4 2 $c >> tmp\
+     && ./a.out 4 5 $c >> tmp\
+     && ./a.out 4 10 $c >> tmp\
+     && ./a.out 4 20 $c >> tmp\
+     && echo >> tmp
+done
+mv tmp tukey.txt
+R -f tukey.R
+}
+
 ##
 ## main
 ##
@@ -90,3 +105,5 @@ simplex_small $MAXDIM
 R -f monte_carlo.R
 
 dist_func
+
+tukey
